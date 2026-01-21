@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Models\UserSupervisorMapping;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -54,7 +55,10 @@ class UserController extends Controller
      * POST /api/users
      */
     public function store(Request $request)
-    {
+{
+    DB::beginTransaction();
+
+    try {
         $validated = $request->validate([
             'fullname' => 'required|string|max:255',
             'username' => 'required|string|unique:users',
@@ -64,18 +68,52 @@ class UserController extends Controller
             'role' => 'required|in:super_admin,admin,supervisor,kam,management',
             'default_kam_id' => 'nullable|exists:users,id',
             'status' => 'nullable|in:active,inactive,blocked',
+            'supervisor_ids' => 'required'
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
 
+        // Create user
         $user = User::create($validated);
+
+        /** -------------------------------
+         * Supervisor Mapping Logic
+         * --------------------------------
+         */
+        if ($request->supervisor_ids === 'all') {
+            // ALL supervisors
+            UserSupervisorMapping::create([
+                'user_id' => $user->id,
+                'supervisor_id' => null
+            ]);
+        } else {
+            // Multiple supervisors
+            foreach ($request->supervisor_ids as $supervisorId) {
+                UserSupervisorMapping::create([
+                    'user_id' => $user->id,
+                    'supervisor_id' => $supervisorId
+                ]);
+            }
+        }
+
+        DB::commit();
 
         return response()->json([
             'status' => true,
             'message' => 'User created successfully',
             'data' => $user
         ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * GET /api/users/{id}
@@ -101,7 +139,10 @@ class UserController extends Controller
      * PUT /api/users/{id}
      */
     public function update(Request $request, $id)
-    {
+{
+    DB::beginTransaction();
+
+    try {
         $user = User::find($id);
 
         if (!$user) {
@@ -120,6 +161,7 @@ class UserController extends Controller
             'role' => 'sometimes|in:super_admin,admin,supervisor,kam,management',
             'default_kam_id' => 'nullable|exists:users,id',
             'status' => 'sometimes|in:active,inactive,blocked',
+            'supervisor_ids' => 'nullable'
         ]);
 
         if (!empty($validated['password'])) {
@@ -130,12 +172,48 @@ class UserController extends Controller
 
         $user->update($validated);
 
+        /** -------------------------------
+         * Supervisor Mapping Update
+         * --------------------------------
+         */
+        if ($request->has('supervisor_ids')) {
+
+            // Remove old mappings
+            UserSupervisorMapping::where('user_id', $user->id)->delete();
+
+            if ($request->supervisor_ids === 'all') {
+                UserSupervisorMapping::create([
+                    'user_id' => $user->id,
+                    'supervisor_id' => null
+                ]);
+            } else {
+                foreach ($request->supervisor_ids as $supervisorId) {
+                    UserSupervisorMapping::create([
+                        'user_id' => $user->id,
+                        'supervisor_id' => $supervisorId
+                    ]);
+                }
+            }
+        }
+
+        DB::commit();
+
         return response()->json([
             'status' => true,
             'message' => 'User updated successfully',
             'data' => $user
         ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * DELETE /api/users/{id}

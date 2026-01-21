@@ -19,10 +19,14 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
+
 Route::prefix('users')->group(function () {
-    Route::get('/', [UserController::class, 'index']);
-    Route::get('/{id}', [UserController::class, 'show']);
-    Route::post('/', [UserController::class, 'store']);
-    Route::put('/{id}', [UserController::class, 'update']);
-    Route::delete('/{id}', [UserController::class, 'destroy']);
+
+    Route::get('/', [UserController::class, 'index']);      // List with pagination
+    Route::post('/', [UserController::class, 'store']);     // Create
+
+    Route::get('{id}', [UserController::class, 'show']);    // Single
+    Route::put('{id}', [UserController::class, 'update']);  // Update
+    Route::delete('{id}', [UserController::class, 'destroy']); // Delete
+
 });

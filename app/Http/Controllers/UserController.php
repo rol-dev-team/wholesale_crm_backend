@@ -20,43 +20,35 @@ class UserController extends Controller
 {
     $perPage = (int) $request->get('per_page', 10);
     $search  = $request->get('search');
-    $status  = $request->get('status');
 
-    $query = Task::query();
+    $query = User::query();
 
-    // 🔍 Search
     if ($search) {
         $query->where(function ($q) use ($search) {
-            $q->where('title', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('meeting_location', 'like', "%{$search}%");
+            $q->where('fullname', 'like', "%{$search}%")
+              ->orWhere('username', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%");
         });
     }
 
-    // 📌 Status filter
-    if ($status) {
-        $query->where('status', $status);
-    }
-
-    $tasks = $query
+    $users = $query
         ->orderBy('id', 'desc')
         ->paginate($perPage);
 
     return response()->json([
-        'status'  => true,
-        'message' => 'Task list',
-        'data'    => $tasks->items(), // ONLY DATA
-        'meta'    => [
-            'current_page' => $tasks->currentPage(),
-            'per_page'     => $tasks->perPage(),
-            'total'        => $tasks->total(),
-            'last_page'    => $tasks->lastPage(),
-            'from'         => $tasks->firstItem(),
-            'to'           => $tasks->lastItem(),
+        'status' => true,
+        'message' => 'User list',
+        'data' => $users->items(), // ONLY DATA
+        'meta' => [
+            'current_page' => $users->currentPage(),
+            'per_page'     => $users->perPage(),
+            'total'        => $users->total(),
+            'last_page'    => $users->lastPage(),
+            'from'         => $users->firstItem(),
+            'to'           => $users->lastItem(),
         ]
     ]);
 }
-
 
 
     /**

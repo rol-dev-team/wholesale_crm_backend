@@ -5,7 +5,8 @@ use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesTargetController;
-use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\ActivityTypeController;
 
 
 // PUBLIC routes
@@ -47,9 +48,17 @@ Route::prefix('sales-targets')->group(function () {
 
 
 Route::prefix('tasks')->group(function () {
-    Route::get('/', [TaskController::class, 'index']);
-    Route::post('/', [TaskController::class, 'store']);
-    Route::get('{task}', [TaskController::class, 'show']);
-    Route::put('{task}', [TaskController::class, 'update']);
-    Route::delete('{task}', [TaskController::class, 'destroy']);
+    Route::get('/', [ActivityController::class, 'index']);
+    Route::post('/', [ActivityController::class, 'store']);
+    Route::get('{task}', [ActivityController::class, 'show']);
+    Route::put('{task}', [ActivityController::class, 'update']);
+    Route::delete('{task}', [ActivityController::class, 'destroy']);
+});
+
+Route::prefix('activity-types')->group(function () {
+    Route::get('/', [ActivityTypeController::class, 'index']);
+    Route::post('/', [ActivityTypeController::class, 'store']);
+    Route::get('{activityType}', [ActivityTypeController::class, 'show']);
+    Route::put('{activityType}', [ActivityTypeController::class, 'update']);
+    Route::delete('{activityType}', [ActivityTypeController::class, 'destroy']);
 });

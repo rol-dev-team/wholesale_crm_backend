@@ -169,7 +169,7 @@ class ActivityController extends Controller
         'kam_id'            => $task->kam_id,
         'client_id'         => $task->client_id,
         'activity_type_id'  => $task->activity_type_id,
-        'action_by'         => Auth::id(), // frontend না, auth user
+        'action_by'         => $task->posted_by,
         'title'             => $task->title,
         'description'       => $task->description,
         'meeting_location'  => $task->meeting_location,

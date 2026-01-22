@@ -6,6 +6,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesTargetController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\KamPerformanceController;
+use App\Http\Controllers\ClientController;
 
 
 // PUBLIC routes
@@ -53,3 +55,17 @@ Route::prefix('tasks')->group(function () {
     Route::put('{task}', [TaskController::class, 'update']);
     Route::delete('{task}', [TaskController::class, 'destroy']);
 });
+
+
+
+
+Route::prefix('kam-performance')->group(function () {
+    Route::get('/', [KamPerformanceController::class, 'index']);
+});
+
+
+
+Route::prefix('clients')->group(function () {
+    Route::get('/', [ClientController::class, 'index']);
+});
+

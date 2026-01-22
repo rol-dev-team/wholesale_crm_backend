@@ -16,7 +16,7 @@ return new class extends Migration
             $table->date('target_month'); // e.g. 2026-01-01
             $table->string('division')->index();
 
-            $table->unsignedBigInteger('supervisor_id')->index();
+            $table->unsignedBigInteger('supervisor_id')->nullable()->index();
             $table->unsignedBigInteger('kam_id')->index();
 
             $table->decimal('amount', 15, 2);

@@ -5,11 +5,13 @@ use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesTargetController;
+use App\Http\Controllers\TaskController;
+
 
 // PUBLIC routes
 Route::post('/login', [AuthController::class, 'login']);
 
-// PROTECTED routes
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -43,3 +45,11 @@ Route::prefix('sales-targets')->group(function () {
     Route::delete('{id}', [SalesTargetController::class, 'destroy']);
 });
 
+
+Route::prefix('tasks')->group(function () {
+    Route::get('/', [TaskController::class, 'index']);
+    Route::post('/', [TaskController::class, 'store']);
+    Route::get('{task}', [TaskController::class, 'show']);
+    Route::put('{task}', [TaskController::class, 'update']);
+    Route::delete('{task}', [TaskController::class, 'destroy']);
+});

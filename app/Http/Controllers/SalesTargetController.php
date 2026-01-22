@@ -56,7 +56,7 @@ class SalesTargetController extends Controller
         $validated = $request->validate([
             'target_month' => 'required|date',
             'division' => 'required|string',
-            'supervisor_id' => 'required|integer',
+            'supervisor_id' => 'nullable|integer',
             'kam_id' => 'required|integer',
             'amount' => 'required|numeric|min:0',
             'posted_by' => 'required|integer',

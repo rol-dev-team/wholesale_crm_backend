@@ -10,6 +10,7 @@ use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\KamPerformanceController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\PrismApiController;
 
 
 // PUBLIC routes
@@ -78,4 +79,14 @@ Route::prefix('kam-performance')->group(function () {
 Route::prefix('clients')->group(function () {
     Route::get('/', [ClientController::class, 'index']);
 });
+
+
+Route::prefix('prism')->group(function () {
+    Route::get('/branch-list', [PrismApiController::class, 'branchList']);
+    Route::get('/branch-wise-supervisor-list/{branch_id}', [PrismApiController::class, 'branchWiseSupervisorList']);
+    Route::get('/supervisor-wise-kam-list/{supervisor_id}', [PrismApiController::class, 'supervisorWiseKamList']);
+    Route::get('/kam-wise-client-list/{kam_id}', [PrismApiController::class, 'kamWiseClientList']);
+});
+
+
 

@@ -63,7 +63,7 @@ return [
             ]) : [],
         ],
 
-        'mysql_second' => [
+        'mysql_second' => [                // second DB
             'driver'    => env('DB_SECOND_CONNECTION', 'mysql'),
             'host'      => env('DB_SECOND_HOST', '127.0.0.1'),
             'port'      => env('DB_SECOND_PORT', '3306'),

@@ -7,6 +7,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesTargetController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ActivityTypeController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\KamPerformanceController;
+use App\Http\Controllers\ClientController;
 
 
 // PUBLIC routes
@@ -62,3 +65,17 @@ Route::prefix('activity-types')->group(function () {
     Route::put('{activityType}', [ActivityTypeController::class, 'update']);
     Route::delete('{activityType}', [ActivityTypeController::class, 'destroy']);
 });
+
+
+
+
+Route::prefix('kam-performance')->group(function () {
+    Route::get('/', [KamPerformanceController::class, 'index']);
+});
+
+
+
+Route::prefix('clients')->group(function () {
+    Route::get('/', [ClientController::class, 'index']);
+});
+

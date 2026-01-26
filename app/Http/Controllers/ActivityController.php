@@ -50,14 +50,34 @@ public function index(Request $request)
     /* =========================
        MAIN DB : TASKS QUERY
     ========================== */
+    // $query = Task::query()
+    //     ->select(
+    //         'tasks.*',
+    //         'activity_types.activity_type_name',
+    //         'users.username as posted_by_user'
+    //     )
+    //     ->join('activity_types', 'activity_types.id', '=', 'tasks.activity_type_id')
+    //     ->join('users', 'users.id', '=', 'tasks.posted_by');
+
     $query = Task::query()
-        ->select(
-            'tasks.*',
-            'activity_types.activity_type_name',
-            'users.username as posted_by_user'
-        )
-        ->join('activity_types', 'activity_types.id', '=', 'tasks.activity_type_id')
-        ->join('users', 'users.id', '=', 'tasks.posted_by');
+    ->with([
+        'notes:id,task_id,note,created_at,updated_at'
+    ])
+    
+    ->select(
+        'tasks.*',
+        'activity_types.activity_type_name',
+        'users.username as posted_by_user'
+    )
+    ->selectSub(
+        DB::table('task_notes')
+            ->selectRaw('COUNT(*)')
+            ->whereColumn('task_notes.task_id', 'tasks.id'),
+        'notes_count' 
+    )
+    ->join('activity_types', 'activity_types.id', '=', 'tasks.activity_type_id')
+    ->join('users', 'users.id', '=', 'tasks.posted_by');
+
 
     /* 🔯োগ SEARCH */
     if ($search) {
@@ -144,6 +164,7 @@ public function index(Request $request)
     ========================== */
     $data = collect($tasks->items())->map(function ($task) use ($kamMap, $clientMap) {
     return array_merge($task->toArray(), [
+        'notes_count' => $task->notes_count, 
         'kam_name'    => $kamMap[$task->kam_id] ?? null,
         'client_name' => $clientMap[$task->client_id] ?? null,
     ]);
@@ -275,6 +296,26 @@ public function index(Request $request)
             'status'  => true,
             'message' => 'Task deleted successfully'
         ]);
+    }
+
+    public function addNotes(Request $request)
+    {
+        $request->validate([
+            'note' => 'required|string',
+        ]);
+
+        // Ensure task exists
+        $task = Task::findOrFail($request->task_id);
+
+        $note = TaskNote::create([
+            'task_id' => $task->id,
+            'note'    => $request->note,
+        ]);
+
+        return response()->json([
+            'message' => 'Note added successfully',
+            'data'    => $note,
+        ], 201);
     }
 
     /* ================= LOG HELPER ================= */

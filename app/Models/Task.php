@@ -38,6 +38,8 @@ class Task extends Model
 
     public function notes()
     {
-        return $this->hasMany(TaskNote::class);
+        return $this->hasMany(TaskNote::class, 'task_id');
     }
+
+
 }

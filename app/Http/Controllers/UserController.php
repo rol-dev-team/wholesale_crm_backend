@@ -66,7 +66,7 @@ class UserController extends Controller
             'phone' => 'nullable|string',
             'password' => 'required|min:6',
             'role' => 'required|in:super_admin,admin,supervisor,kam,management',
-            'default_kam_id' => 'nullable|exists:users,id',
+            'default_kam_id' => 'required|integer',
             'status' => 'nullable|in:active,inactive,blocked',
             'supervisor_ids' => 'required'
         ]);

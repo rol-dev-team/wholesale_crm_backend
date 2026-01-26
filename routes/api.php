@@ -58,6 +58,7 @@ Route::prefix('tasks')->group(function () {
     Route::put('{task}', [ActivityController::class, 'update']);
     Route::delete('{task}', [ActivityController::class, 'destroy']);
     Route::get('summary/{kamId}', [ActivityController::class, 'statusSummary']);
+    Route::post('notes', [ActivityController::class, 'addNotes']);
 });
 
 Route::prefix('activity-types')->group(function () {

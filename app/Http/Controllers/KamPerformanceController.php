@@ -583,6 +583,141 @@ class KamPerformanceController extends Controller
     //     ]);
     // }
 
+    // public function index(Request $request)
+    // {
+    //     $search = $request->search;
+    //     $clientType = $request->client_type ?? 'All Client'; // all, self, transferred
+
+    //     // DEFAULT DATE RANGE: CURRENT MONTH
+    //     if (!$request->start_date || !$request->end_date) {
+    //         $now = Carbon::now();
+    //         $start_date = $now->copy()->startOfMonth()->format('Y-m-d');
+    //         $end_date = $now->copy()->endOfMonth()->format('Y-m-d');
+    //     } else {
+    //         $start_date = $request->start_date;
+    //         $end_date = $request->end_date;
+    //     }
+
+    //     // Calculate previous month date range
+    //     $prevMonthStart = Carbon::parse($start_date)->subMonth()->startOfMonth()->format('Y-m-d');
+    //     $prevMonthEnd = Carbon::parse($start_date)->subMonth()->endOfMonth()->format('Y-m-d');
+
+    //     // Build client type condition
+    //     $clientTypeCondition = '';
+    //     if ($clientType === 'Self Client') {
+    //         $clientTypeCondition = ' AND sup.total_supervisors_ever = 1';
+    //     } elseif ($clientType === 'Transferred Client') {
+    //         $clientTypeCondition = ' AND sup.total_supervisors_ever > 1';
+    //     }
+    //     // else 'All Client' - no additional condition
+
+    //     $query = "
+    //         SELECT 
+    //             pk.full_name AS current_supervisor,
+    //             ps.other_party_id AS supervisor_id,
+    //             YEAR(v.voucher_date) AS voucher_year,
+    //             MONTH(v.voucher_date) AS voucher_month_number,
+    //             COUNT(DISTINCT ps.party_id) AS total_client_count,
+    //             COUNT(DISTINCT CASE WHEN sup.total_supervisors_ever > 1 THEN ps.party_id ELSE NULL END) AS transferred_client_count,
+    //             COUNT(DISTINCT CASE WHEN sup.total_supervisors_ever = 1 THEN ps.party_id ELSE NULL END) AS self_client_count,
+    //             COALESCE(SUM(v.amount), 0) AS total_voucher_amount,
+    //             COALESCE(SUM(CASE WHEN sup.total_supervisors_ever > 1 THEN v.amount ELSE 0 END), 0) AS transferred_client_voucher_amount,
+    //             COALESCE(SUM(CASE WHEN sup.total_supervisors_ever = 1 THEN v.amount ELSE 0 END), 0) AS self_client_voucher_amount,
+    //             COALESCE(pv.previous_month_amount, 0) AS transferred_previous_month_voucher_amount,
+    //             COALESCE(SUM(CASE WHEN sup.total_supervisors_ever > 1 THEN v.amount ELSE 0 END), 0) - COALESCE(pv.previous_month_amount, 0) AS transfer_up_down_voucher
+    //         FROM party_supervisors ps
+    //         JOIN parties pa ON pa.id = ps.party_id AND pa.type = 'customer' AND pa.inactive = 0
+    //         JOIN parties pk ON pk.id = ps.other_party_id AND pk.inactive = 0
+    //         LEFT JOIN vouchers v ON v.party_id = ps.party_id
+    //             AND v.voucher_date BETWEEN ? AND ?
+    //             AND v.type = 75
+    //         LEFT JOIN (
+    //             SELECT party_id, COUNT(DISTINCT other_party_id) AS total_supervisors_ever
+    //             FROM party_supervisors
+    //             GROUP BY party_id
+    //         ) sup ON sup.party_id = ps.party_id
+    //         LEFT JOIN (
+    //             SELECT 
+    //                 ps_prev.other_party_id AS supervisor_id,
+    //                 COALESCE(SUM(CASE WHEN sup_prev.total_supervisors_ever > 1 THEN v_prev.amount ELSE 0 END), 0) AS previous_month_amount
+    //             FROM party_supervisors ps_prev
+    //             JOIN vouchers v_prev ON v_prev.party_id = ps_prev.party_id
+    //                 AND v_prev.voucher_date BETWEEN ? AND ?
+    //                 AND v_prev.type = 75
+    //             LEFT JOIN (
+    //                 SELECT party_id, COUNT(DISTINCT other_party_id) AS total_supervisors_ever
+    //                 FROM party_supervisors
+    //                 GROUP BY party_id
+    //             ) sup_prev ON sup_prev.party_id = ps_prev.party_id
+    //             WHERE ps_prev.end_date IS NULL
+    //             GROUP BY ps_prev.other_party_id
+    //         ) pv ON pv.supervisor_id = ps.other_party_id
+    //         WHERE ps.end_date IS NULL
+    //         AND v.voucher_date IS NOT NULL
+    //         {$clientTypeCondition}
+    //         " . ($search ? " AND (pk.full_name LIKE ? OR pa.full_name LIKE ?)" : "") . "
+    //         GROUP BY pk.full_name, ps.other_party_id, YEAR(v.voucher_date), MONTH(v.voucher_date), pv.previous_month_amount
+    //         ORDER BY pk.full_name, YEAR(v.voucher_date), MONTH(v.voucher_date)
+    //     ";
+
+    //     // Bind parameters
+    //     $bindings = [
+    //         $start_date, 
+    //         $end_date,
+    //         $prevMonthStart,
+    //         $prevMonthEnd
+    //     ];
+        
+    //     if ($search) {
+    //         $bindings[] = "%{$search}%";
+    //         $bindings[] = "%{$search}%";
+    //     }
+
+    //     // Execute raw query
+    //     $results = DB::connection('mysql_second')->select($query, $bindings);
+
+    //     // Fetch sales targets from the primary database (mysql connection)
+    //     $salesTargets = DB::connection('mysql')
+    //         ->select("
+    //             SELECT 
+    //                 kam_id,
+    //                 YEAR(target_month) as target_year,
+    //                 MONTH(target_month) as target_month_number,
+    //                 amount
+    //             FROM sales_targets
+    //         ");
+
+    //     // Create a lookup map for sales targets: kam_id_year_month => amount
+    //     $targetMap = [];
+    //     foreach ($salesTargets as $target) {
+    //         $key = $target->kam_id . '_' . $target->target_year . '_' . $target->target_month_number;
+    //         $targetMap[$key] = $target->amount;
+    //     }
+
+    //     // Merge sales targets with results
+    //     foreach ($results as $result) {
+    //         $targetKey = $result->supervisor_id . '_' . $result->voucher_year . '_' . $result->voucher_month_number;
+            
+    //         $result->target_amount = $targetMap[$targetKey] ?? '0.00';
+    //     }
+
+    //     // Optional: manual pagination
+    //     $perPage = $request->per_page ?? 10;
+    //     $page = $request->page ?? 1;
+    //     $offset = ($page - 1) * $perPage;
+    //     $paginated = array_slice($results, $offset, $perPage);
+
+    //     return response()->json([
+    //         'data' => $paginated,
+    //         'total' => count($results),
+    //         'per_page' => $perPage,
+    //         'current_page' => $page,
+    //         'last_page' => ceil(count($results) / $perPage),
+    //     ]);
+    // }
+
+
+
     public function index(Request $request)
     {
         $search = $request->search;
@@ -609,7 +744,18 @@ class KamPerformanceController extends Controller
         } elseif ($clientType === 'Transferred Client') {
             $clientTypeCondition = ' AND sup.total_supervisors_ever > 1';
         }
-        // else 'All Client' - no additional condition
+
+        // SEARCH CONDITION (extended for supervisor_id)
+        $searchCondition = '';
+        if ($search) {
+            $searchCondition = "
+                AND (
+                    pk.full_name LIKE ?
+                    OR pa.full_name LIKE ?
+                    OR ps.other_party_id = ?
+                )
+            ";
+        }
 
         $query = "
             SELECT 
@@ -624,7 +770,8 @@ class KamPerformanceController extends Controller
                 COALESCE(SUM(CASE WHEN sup.total_supervisors_ever > 1 THEN v.amount ELSE 0 END), 0) AS transferred_client_voucher_amount,
                 COALESCE(SUM(CASE WHEN sup.total_supervisors_ever = 1 THEN v.amount ELSE 0 END), 0) AS self_client_voucher_amount,
                 COALESCE(pv.previous_month_amount, 0) AS transferred_previous_month_voucher_amount,
-                COALESCE(SUM(CASE WHEN sup.total_supervisors_ever > 1 THEN v.amount ELSE 0 END), 0) - COALESCE(pv.previous_month_amount, 0) AS transfer_up_down_voucher
+                COALESCE(SUM(CASE WHEN sup.total_supervisors_ever > 1 THEN v.amount ELSE 0 END), 0)
+                    - COALESCE(pv.previous_month_amount, 0) AS transfer_up_down_voucher
             FROM party_supervisors ps
             JOIN parties pa ON pa.id = ps.party_id AND pa.type = 'customer' AND pa.inactive = 0
             JOIN parties pk ON pk.id = ps.other_party_id AND pk.inactive = 0
@@ -655,54 +802,53 @@ class KamPerformanceController extends Controller
             WHERE ps.end_date IS NULL
             AND v.voucher_date IS NOT NULL
             {$clientTypeCondition}
-            " . ($search ? " AND (pk.full_name LIKE ? OR pa.full_name LIKE ?)" : "") . "
+            {$searchCondition}
             GROUP BY pk.full_name, ps.other_party_id, YEAR(v.voucher_date), MONTH(v.voucher_date), pv.previous_month_amount
             ORDER BY pk.full_name, YEAR(v.voucher_date), MONTH(v.voucher_date)
         ";
 
         // Bind parameters
         $bindings = [
-            $start_date, 
+            $start_date,
             $end_date,
             $prevMonthStart,
-            $prevMonthEnd
+            $prevMonthEnd,
         ];
-        
+
         if ($search) {
             $bindings[] = "%{$search}%";
             $bindings[] = "%{$search}%";
+            $bindings[] = $search; // supervisor_id exact match
         }
 
         // Execute raw query
         $results = DB::connection('mysql_second')->select($query, $bindings);
 
-        // Fetch sales targets from the primary database (mysql connection)
-        $salesTargets = DB::connection('mysql')
-            ->select("
-                SELECT 
-                    kam_id,
-                    YEAR(target_month) as target_year,
-                    MONTH(target_month) as target_month_number,
-                    amount
-                FROM sales_targets
-            ");
+        // Fetch sales targets from primary DB
+        $salesTargets = DB::connection('mysql')->select("
+            SELECT 
+                kam_id,
+                YEAR(target_month) as target_year,
+                MONTH(target_month) as target_month_number,
+                amount
+            FROM sales_targets
+        ");
 
-        // Create a lookup map for sales targets: kam_id_year_month => amount
+        // Create lookup map
         $targetMap = [];
         foreach ($salesTargets as $target) {
             $key = $target->kam_id . '_' . $target->target_year . '_' . $target->target_month_number;
             $targetMap[$key] = $target->amount;
         }
 
-        // Merge sales targets with results
+        // Merge sales targets
         foreach ($results as $result) {
             $targetKey = $result->supervisor_id . '_' . $result->voucher_year . '_' . $result->voucher_month_number;
-            
             $result->target_amount = $targetMap[$targetKey] ?? '0.00';
         }
 
-        // Optional: manual pagination
-        $perPage = $request->per_page ?? 200;
+        // Manual pagination
+        $perPage = $request->per_page ?? 10;
         $page = $request->page ?? 1;
         $offset = ($page - 1) * $perPage;
         $paginated = array_slice($results, $offset, $perPage);
@@ -715,6 +861,7 @@ class KamPerformanceController extends Controller
             'last_page' => ceil(count($results) / $perPage),
         ]);
     }
+
 
 
     public function getTransferredPreviousMonthBreakdown(Request $request)

@@ -17,7 +17,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: "8.3"
           extensions: bcmath, curl, gd, intl, mbstring, pdo_mysql, pdo_pgsql, zip, opcache
 
       - name: Install Composer Dependencies
@@ -65,6 +65,6 @@ jobs:
           script: |
             sudo systemctl restart php8.3-fpm
             sudo systemctl restart nginx
-            sudo systemctl restart postgresql
+            sudo systemctl restart mysql
 
             echo "Deployment completed successfully."

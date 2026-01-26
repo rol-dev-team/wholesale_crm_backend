@@ -5,40 +5,155 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\TaskLog;
+use App\Models\TaskNote;
+use App\Models\ActivityType;
+use App\Models\User;
+use DB;
+
 
 class ActivityController extends Controller
 {
     /* ================= LIST ================= */
-    public function index(Request $request)
+
+
+public function statusSummary($kamId)
+{
+$statusSummary = Task::query()
+    ->select('status', DB::raw('COUNT(*) as total'))
+    ->when($kamId, function ($q) use ($kamId) {
+        $q->where('kam_id', $kamId);
+    })
+    ->groupBy('status')
+    ->pluck('total', 'status');
+
+
+
+    return response()->json([
+        'status'  => true,
+        'message' => 'Summary fetched successfully',
+        'data'    => $statusSummary,
+        
+    ]);
+}
+public function index(Request $request)
 {
     $perPage = (int) $request->get('per_page', 10);
-    $search  = $request->get('search');
-    $status  = $request->get('status');
 
-    $query = Task::query();
+    $search         = $request->get('search');
+    $status         = $request->get('status');
+    $kamId          = $request->get('kam_id');
+    $clientId       = $request->get('client_id');
+    $activityTypeId = $request->get('activity_type_id');
+    $fromDate       = $request->get('from_date');
+    $toDate         = $request->get('to_date');
 
-    // 🔍 Search
+    /* =========================
+       MAIN DB : TASKS QUERY
+    ========================== */
+    $query = Task::query()
+        ->select(
+            'tasks.*',
+            'activity_types.activity_type_name',
+            'users.username as posted_by_user'
+        )
+        ->join('activity_types', 'activity_types.id', '=', 'tasks.activity_type_id')
+        ->join('users', 'users.id', '=', 'tasks.posted_by');
+
+    /* 🔯োগ SEARCH */
     if ($search) {
         $query->where(function ($q) use ($search) {
-            $q->where('title', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('meeting_location', 'like', "%{$search}%");
+            $q->where('tasks.title', 'like', "%{$search}%")
+              ->orWhere('tasks.description', 'like', "%{$search}%")
+              ->orWhere('tasks.meeting_location', 'like', "%{$search}%");
         });
     }
 
-    // 📌 Status filter
-    if ($status) {
-        $query->where('status', $status);
+    /* 📌 STATUS */
+    if ($status && $status !== 'all') {
+        $query->where('tasks.status', $status);
+    }
+
+    /* 👤 KAM */
+    if ($kamId) {
+        $query->where('tasks.kam_id', $kamId);
+    }
+
+    /* 🏢 CLIENT */
+    if ($clientId) {
+        $query->where('tasks.client_id', $clientId);
+    }
+
+    /* 🧾 ACTIVITY TYPE */
+    if ($activityTypeId) {
+        $query->where('tasks.activity_type_id', $activityTypeId);
+    }
+
+    /* 📅 DATE RANGE */
+    if ($fromDate && $toDate) {
+        $query->whereBetween('tasks.activity_schedule', [
+            $fromDate . ' 00:00:00',
+            $toDate . ' 23:59:59'
+        ]);
+    } elseif ($fromDate) {
+        $query->whereDate('tasks.activity_schedule', '>=', $fromDate);
+    } elseif ($toDate) {
+        $query->whereDate('tasks.activity_schedule', '<=', $toDate);
     }
 
     $tasks = $query
-        ->orderBy('id', 'desc')
+        ->orderBy('tasks.id', 'desc')
         ->paginate($perPage);
+
+    /* =========================
+       SECOND DB : KAM MAP
+    ========================== */
+    $kams = DB::connection('mysql_second')->select("
+        SELECT DISTINCT 
+            e.employee_id AS kam_id,
+            pa.full_name AS kam_name
+        FROM employments e
+        JOIN parties pa ON e.employee_id = pa.id
+        JOIN departments d ON e.department_id = d.id
+        JOIN designations ds ON e.designation_id = ds.id
+        WHERE pa.type IS NULL
+          AND pa.subtype = 2
+          AND pa.role = 8
+          AND d.id = 6
+          AND pa.inactive = 0
+    ");
+
+    $kamMap = collect($kams)->pluck('kam_name', 'kam_id');
+
+    /* =========================
+       SECOND DB : CLIENT MAP
+    ========================== */
+    $clients = DB::connection('mysql_second')->select("
+        SELECT DISTINCT 
+            ps.party_id AS client_id,
+            pa.full_name AS client_name
+        FROM party_supervisors ps
+        JOIN parties pa ON ps.party_id = pa.id
+        WHERE pa.type = 'customer'
+          AND ps.end_date IS NULL
+    ");
+
+    $clientMap = collect($clients)->pluck('client_name', 'client_id');
+
+    /* =========================
+       MERGE NAMES INTO TASKS
+    ========================== */
+    $data = collect($tasks->items())->map(function ($task) use ($kamMap, $clientMap) {
+    return array_merge($task->toArray(), [
+        'kam_name'    => $kamMap[$task->kam_id] ?? null,
+        'client_name' => $clientMap[$task->client_id] ?? null,
+    ]);
+});
+
 
     return response()->json([
         'status'  => true,
         'message' => 'Task list',
-        'data'    => $tasks->items(), // ONLY DATA
+        'data'    => $data,
         'meta'    => [
             'current_page' => $tasks->currentPage(),
             'per_page'     => $tasks->perPage(),

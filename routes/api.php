@@ -57,6 +57,7 @@ Route::prefix('tasks')->group(function () {
     Route::get('{task}', [ActivityController::class, 'show']);
     Route::put('{task}', [ActivityController::class, 'update']);
     Route::delete('{task}', [ActivityController::class, 'destroy']);
+    Route::get('summary/{kamId}', [ActivityController::class, 'statusSummary']);
 });
 
 Route::prefix('activity-types')->group(function () {
@@ -87,6 +88,7 @@ Route::prefix('prism')->group(function () {
     Route::get('/supervisor-wise-kam-list/{supervisor_id}', [PrismApiController::class, 'supervisorWiseKamList']);
     Route::get('/kam-wise-client-list/{kam_id}', [PrismApiController::class, 'kamWiseClientList']);
     Route::get('/kam-list', [PrismApiController::class, 'kamList']);
+    Route::get('/client-list', [PrismApiController::class, 'clientList']);
     Route::get('/supervisor-list', [PrismApiController::class, 'supervisorList']);
 });
 

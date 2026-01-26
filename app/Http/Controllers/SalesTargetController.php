@@ -131,4 +131,20 @@ class SalesTargetController extends Controller
             'message' => 'Sales target deleted'
         ]);
     }
+
+    public function totalSaleTarget()
+    {
+        $target = SalesTarget::find($id);
+
+        if (!$target) {
+            return response()->json(['status' => false, 'message' => 'Not found'], 404);
+        }
+
+        $target->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Sales target deleted'
+        ]);
+    }
 }

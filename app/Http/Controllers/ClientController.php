@@ -29,7 +29,8 @@ class ClientController extends Controller
             SELECT DISTINCT pa.full_name, pa.code as party_code,pa.mobile,pa.email, pa.inactive,'Dhaka' as division, 
                 'Banani' as zone, 'Sam' as assigned_kam
             FROM parties pa 
-            WHERE pa.type = 'customer';
+            WHERE pa.type = 'customer'
+            AND pa.inactive = 0;
         ");
 
         

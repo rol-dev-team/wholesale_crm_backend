@@ -11,6 +11,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\KamPerformanceController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\PrismApiController;
+use App\Http\Controllers\DashboardController;
 
 
 // PUBLIC routes
@@ -59,6 +60,7 @@ Route::prefix('tasks')->group(function () {
     Route::delete('{task}', [ActivityController::class, 'destroy']);
     Route::get('summary/{kamId}', [ActivityController::class, 'statusSummary']);
     Route::post('notes', [ActivityController::class, 'addNotes']);
+    Route::post('update-status', [ActivityController::class, 'updateStatus']);
 });
 
 Route::prefix('activity-types')->group(function () {
@@ -68,6 +70,14 @@ Route::prefix('activity-types')->group(function () {
     Route::put('{activityType}', [ActivityTypeController::class, 'update']);
     Route::delete('{activityType}', [ActivityTypeController::class, 'destroy']);
 });
+
+Route::prefix('dashboard')->group(function () {
+    Route::get('admin/summary', [DashboardController::class, 'adminSummary']);
+    Route::get('admin/kpi/summary', [DashboardController::class, 'kpiSummary']);
+
+});
+
+
 
 
 

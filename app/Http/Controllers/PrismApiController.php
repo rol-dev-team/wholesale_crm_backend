@@ -165,7 +165,7 @@ AND d.id = 6 AND pa.inactive = 0");
     END AS client_transfer_status,
     ps.start_date AS supervisor_start_date,ps.end_date AS supervisor_end_date,ps.other_party_id,ps.inactive
 FROM party_supervisors ps
-JOIN parties pa ON ps.party_id = pa.id AND pa.type = 'customer'
+JOIN parties pa ON ps.party_id = pa.id AND pa.type = 'customer' AND pa.inactive = 0
 JOIN parties pk ON ps.other_party_id = pk.id
 
 WHERE ps.end_date IS NULL

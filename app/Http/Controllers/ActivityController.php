@@ -318,6 +318,44 @@ public function index(Request $request)
         ], 201);
     }
 
+    public function updateStatus(Request $request)
+{
+    $data = $request->validate([
+        'task_id' => 'required|exists:tasks,id',
+        'status'  => 'required|in:completed,cancelled',
+        'message' => 'required|string',
+    ]);
+
+     $task = Task::findOrFail($data['task_id']);
+
+     if (in_array($task->status, ['completed', 'cancelled'])) {
+        return response()->json([
+            'status'  => true,
+            'message' => 'Task already finalized',
+        ], 400);
+    }
+    DB::transaction(function () use ($data) {
+
+        // 1️⃣ Update task
+        $task->update([
+            'status'      => $data['status'],
+            'description' => $data['message'], // ⭐ important
+        ]);
+
+        // 2️⃣ Log using EXISTING function
+        $this->log(
+            $task,
+            $data['status'] === 'completed'
+                ? TaskLog::ACTION_COMPLETED
+                : TaskLog::ACTION_CANCELLED
+        );
+    });
+
+    return response()->json([
+        'status'  => true,
+        'message' => 'Task status updated successfully',
+    ]);
+}
     /* ================= LOG HELPER ================= */
     private function log(Task $task, string $actionType): void
 {

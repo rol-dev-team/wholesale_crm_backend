@@ -65,6 +65,8 @@ Route::prefix('activity-types')->group(function () {
 
 Route::prefix('kam-performance')->group(function () {
     Route::get('/', [KamPerformanceController::class, 'index']);
+    Route::get('/kam-list', [KamPerformanceController::class, 'kamList']);
+    Route::get('/supervisor-wise-kam-list/{supervisor_id}', [KamPerformanceController::class, 'supervisorWiseKamList']);
     Route::get('/kam-performance-breakdown', [KamPerformanceController::class, 'getTransferredPreviousMonthBreakdown']);
 });
 

@@ -236,12 +236,13 @@ class KamPerformanceController extends Controller
 
 
 
-    public function getKamList(Request $request)
+    public function kamList(Request $request)
     {
         try {
             $user = Auth::user();
             $userRole = $user->role; // Assuming role is stored in user table
-            $userId = $user->id; // or user_party_id depending on your structure
+            $userId = $user->default_kam_id;
+            // $userId = $user->id;
 
             // Get user's party_id if needed
             $userPartyId = DB::connection('mysql_second')
@@ -269,25 +270,43 @@ class KamPerformanceController extends Controller
                     ORDER BY pa.full_name ASC
                 ");
             } elseif ($userRole === 'supervisor') {
-                // Get KAMs under this supervisor
+
                 $kams = DB::connection('mysql_second')->select("
-                    SELECT DISTINCT 
-                        e.employee_id AS kam_id,
-                        pa.full_name AS kam_name
-                    FROM employments e
-                    JOIN parties pa ON e.employee_id = pa.id
-                    JOIN departments d ON e.department_id = d.id
-                    JOIN designations ds ON e.designation_id = ds.id
-                    LEFT JOIN parties p ON p.id = e.manager_1
-                    WHERE pa.type IS NULL 
-                    AND pa.subtype = 2 
-                    AND pa.role = 8
-                    AND d.id = 6 
-                    AND pa.inactive = 0
-                    AND e.manager_1 = ?
-                    ORDER BY pa.full_name ASC
-                ", [$userPartyId]);
+                    (
+                        -- Supervisor himself
+                        SELECT 
+                            pa.id AS kam_id,
+                            pa.full_name AS kam_name
+                        FROM parties pa
+                        WHERE pa.id = ?
+                    )
+
+                    UNION
+
+                    (
+                        -- KAMs under this supervisor
+                        SELECT DISTINCT 
+                            e.employee_id AS kam_id,
+                            pa.full_name AS kam_name
+                        FROM employments e
+                        JOIN parties pa ON e.employee_id = pa.id
+                        JOIN departments d ON e.department_id = d.id
+                        JOIN designations ds ON e.designation_id = ds.id
+                        WHERE pa.type IS NULL 
+                            AND pa.subtype = 2 
+                            AND pa.role = 8
+                            AND d.id = 6 
+                            AND pa.inactive = 0
+                            AND e.manager_1 = ?
+                    )
+
+                    ORDER BY kam_name ASC
+                ", [
+                    $userPartyId, // supervisor himself
+                    $userPartyId  // supervisor's KAMs
+                ]);
             }
+
             // For KAM role, return empty array
 
             return response()->json([
@@ -355,6 +374,8 @@ class KamPerformanceController extends Controller
         try {
             // Get current user
             $user = Auth::user();
+
+            // return $user;
             
             // ✅ FIX: Handle null user
             if (!$user) {
@@ -366,7 +387,10 @@ class KamPerformanceController extends Controller
             }
 
             $userRole = $user->role ?? 'super_admin';
-            $userPartyId = $user->id;
+            // $userPartyId = $user->id;
+            $userPartyId = $user->default_kam_id;
+
+            // return [$userRole, $userPartyId];
 
             $search = $request->search;
             $clientType = $request->client_type ?? 'All Client';
@@ -412,19 +436,110 @@ class KamPerformanceController extends Controller
             $roleCondition = '';
             $roleBindings = [];
 
+            // if ($userRole === 'supervisor') {
+            //     // Supervisor sees only KAMs under them
+            //     $roleCondition = ' AND ps.other_party_id IN (
+            //         SELECT e.employee_id
+            //         FROM employments e
+            //         WHERE e.manager_1 = ?
+            //     )';
+            //     $roleBindings = [$userPartyId];
+            // } elseif ($userRole === 'kam') {
+            //     // KAM sees only their own data
+            //     $roleCondition = ' AND ps.other_party_id = ?';
+            //     $roleBindings = [$userPartyId];
+            // }
+
+
+            // if ($userRole === 'supervisor') {
+
+            //     if (!$search || $search === 'all') {
+            //         // ✅ DEFAULT: load supervisor's own data only
+            //         $roleCondition = ' AND ps.other_party_id = ?';
+            //         $roleBindings = [$userPartyId];
+
+            //     } else {
+            //         // ✅ When supervisor selects a KAM, allow only his KAMs
+            //         $roleCondition = '
+            //             AND ps.other_party_id IN (
+            //                 SELECT e.employee_id
+            //                 FROM employments e
+            //                 WHERE e.manager_1 = ?
+            //             )
+            //         ';
+            //         $roleBindings = [$userPartyId];
+            //     }
+
+            // } elseif ($userRole === 'kam') {
+
+            //     // KAM always sees only himself
+            //     $roleCondition = ' AND ps.other_party_id = ?';
+            //     $roleBindings = [$userPartyId];
+            // }
+
+
+            $roleCondition = '';
+            $roleBindings = [];
+
+            // if ($userRole === 'supervisor') {
+
+            //     if (!$search || $search === 'all') {
+            //         // ✅ Supervisor + all his KAMs
+            //         $roleCondition = '
+            //             AND ps.other_party_id IN (
+            //                 SELECT ? 
+            //                 UNION
+            //                 SELECT e.employee_id
+            //                 FROM employments e
+            //                 WHERE e.manager_1 = ?
+            //             )
+            //         ';
+            //         $roleBindings = [$userPartyId, $userPartyId];
+
+            //     } else {
+            //         // ✅ Supervisor selected a specific KAM
+            //         $roleCondition = ' AND ps.other_party_id = ?';
+            //         $roleBindings = [$search];
+            //     }
+
+            // } elseif ($userRole === 'kam') {
+
+            //     // ✅ KAM always sees only himself
+            //     $roleCondition = ' AND ps.other_party_id = ?';
+            //     $roleBindings = [$userPartyId];
+            // }
+
+
             if ($userRole === 'supervisor') {
-                // Supervisor sees only KAMs under them
-                $roleCondition = ' AND ps.other_party_id IN (
-                    SELECT e.employee_id
-                    FROM employments e
-                    WHERE e.manager_1 = ?
-                )';
-                $roleBindings = [$userPartyId];
+
+                if (!$search || $search === 'all') {
+                    // ✅ DEFAULT: supervisor + all KAMs
+                    $roleCondition = '
+                        AND ps.other_party_id IN (
+                            SELECT e.employee_id
+                            FROM employments e
+                            WHERE e.manager_1 = ?
+                            UNION
+                            SELECT ?
+                        )
+                    ';
+                    $roleBindings = [$userPartyId, $userPartyId];
+
+                } else {
+                    // ✅ Specific KAM selected
+                    $roleCondition = ' AND ps.other_party_id = ?';
+                    $roleBindings = [$search];
+                }
+
             } elseif ($userRole === 'kam') {
-                // KAM sees only their own data
+
+                // KAM always sees only himself
                 $roleCondition = ' AND ps.other_party_id = ?';
                 $roleBindings = [$userPartyId];
             }
+
+
+
             // super_admin and management see all data (no restriction)
 
             // Conditional SELECT and GROUP BY based on view mode
@@ -541,20 +656,62 @@ class KamPerformanceController extends Controller
             }
 
             // Add role condition to totals query
+            // if ($userRole === 'supervisor') {
+            //     $totalQuery .= " AND v.party_id IN (
+            //         SELECT ps.party_id FROM party_supervisors ps
+            //         WHERE ps.other_party_id IN (
+            //             SELECT e.employee_id FROM employments e WHERE e.manager_1 = ?
+            //         )
+            //     )";
+            //     $totalBindings[] = $userPartyId;
+            // } elseif ($userRole === 'kam') {
+            //     $totalQuery .= " AND v.party_id IN (
+            //         SELECT ps.party_id FROM party_supervisors ps WHERE ps.other_party_id = ?
+            //     )";
+            //     $totalBindings[] = $userPartyId;
+            // }
+
+
             if ($userRole === 'supervisor') {
-                $totalQuery .= " AND v.party_id IN (
-                    SELECT ps.party_id FROM party_supervisors ps
-                    WHERE ps.other_party_id IN (
-                        SELECT e.employee_id FROM employments e WHERE e.manager_1 = ?
-                    )
-                )";
-                $totalBindings[] = $userPartyId;
+
+                if (!$search || $search === 'all') {
+                    $totalQuery .= "
+                        AND v.party_id IN (
+                            SELECT ps.party_id
+                            FROM party_supervisors ps
+                            WHERE ps.other_party_id IN (
+                                SELECT ?
+                                UNION
+                                SELECT e.employee_id FROM employments e WHERE e.manager_1 = ?
+                            )
+                        )
+                    ";
+                    $totalBindings[] = $userPartyId;
+                    $totalBindings[] = $userPartyId;
+
+                } else {
+                    $totalQuery .= "
+                        AND v.party_id IN (
+                            SELECT ps.party_id
+                            FROM party_supervisors ps
+                            WHERE ps.other_party_id = ?
+                        )
+                    ";
+                    $totalBindings[] = $search;
+                }
+
             } elseif ($userRole === 'kam') {
-                $totalQuery .= " AND v.party_id IN (
-                    SELECT ps.party_id FROM party_supervisors ps WHERE ps.other_party_id = ?
-                )";
+
+                $totalQuery .= "
+                    AND v.party_id IN (
+                        SELECT ps.party_id
+                        FROM party_supervisors ps
+                        WHERE ps.other_party_id = ?
+                    )
+                ";
                 $totalBindings[] = $userPartyId;
             }
+
 
             $totals = DB::connection('mysql_second')->selectOne($totalQuery, $totalBindings);
 

@@ -126,13 +126,13 @@ GROUP BY ps.party_id, ps.inactive, pa.full_name, pk.full_name, ps.other_party_id
         try{
 
         $branch = DB::connection('mysql_second')->select("SELECT DISTINCT e.employee_id AS kam_id, pa.full_name AS kam_name
-FROM employments e
-JOIN parties pa ON e.employee_id = pa.id
-JOIN departments d ON e.department_id = d.id
-JOIN designations ds ON e.designation_id = ds.id
-LEFT JOIN parties p ON p.id = e.manager_1
-WHERE pa.type is NULL and pa.subtype = 2 and pa.role = 8
-AND d.id = 6 AND pa.inactive = 0");
+            FROM employments e
+            JOIN parties pa ON e.employee_id = pa.id
+            JOIN departments d ON e.department_id = d.id
+            JOIN designations ds ON e.designation_id = ds.id
+            LEFT JOIN parties p ON p.id = e.manager_1
+            WHERE pa.type is NULL and pa.subtype = 2 and pa.role = 8
+            AND d.id = 6 AND pa.inactive = 0");
         return response()->json([
         'status'  => true,
         'message' => 'Fetched kam successfully',

@@ -14,6 +14,7 @@ use App\Http\Controllers\PrismApiController;
 use App\Http\Controllers\DashboardController;
 
 
+
 // PUBLIC routes
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -21,15 +22,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Example: protected user info
-    Route::get('/user', function () {
-        return auth()->user();
-    });
-});
 
-
-
-Route::prefix('users')->group(function () {
+    Route::prefix('users')->group(function () {
 
     Route::get('/', [UserController::class, 'index']);      // List with pagination
     Route::post('/', [UserController::class, 'store']);     // Create
@@ -39,9 +33,6 @@ Route::prefix('users')->group(function () {
     Route::delete('{id}', [UserController::class, 'destroy']); // Delete
 
 });
-
-
-
 
 Route::prefix('sales-targets')->group(function () {
     Route::get('/', [SalesTargetController::class, 'index']);
@@ -71,15 +62,6 @@ Route::prefix('activity-types')->group(function () {
     Route::delete('{activityType}', [ActivityTypeController::class, 'destroy']);
 });
 
-Route::prefix('dashboard')->group(function () {
-    Route::get('admin/summary', [DashboardController::class, 'adminSummary']);
-    Route::get('admin/kpi/summary', [DashboardController::class, 'kpiSummary']);
-
-});
-
-
-
-
 
 Route::prefix('kam-performance')->group(function () {
     Route::get('/', [KamPerformanceController::class, 'index']);
@@ -102,6 +84,19 @@ Route::prefix('prism')->group(function () {
     Route::get('/client-list', [PrismApiController::class, 'clientList']);
     Route::get('/supervisor-list', [PrismApiController::class, 'supervisorList']);
 });
+
+
+    Route::prefix('dashboard')->group(function () {
+    Route::get('admin/summary', [DashboardController::class, 'adminSummary']);
+    Route::get('admin/kpi/summary', [DashboardController::class, 'kpiSummary']);
+
+});
+
+
+});
+
+
+
 
 
 

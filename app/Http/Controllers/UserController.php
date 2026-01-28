@@ -84,7 +84,7 @@ class UserController extends Controller
             // ALL supervisors
             UserSupervisorMapping::create([
                 'user_id' => $user->id,
-                'supervisor_id' => null
+                'supervisor_id' => 0
             ]);
         } else {
             // Multiple supervisors

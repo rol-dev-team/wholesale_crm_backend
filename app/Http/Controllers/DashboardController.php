@@ -15,6 +15,11 @@ class DashboardController extends Controller
 {
     public function adminSummary()
 {
+  $users = auth()->user();
+  return response()->json([
+      'status' => true, 
+      'data' => $users
+  ]);
     try {
         /* ---------------- TOTAL KAM ---------------- */
         $totalKams = DB::connection('mysql_second')
@@ -32,16 +37,14 @@ class DashboardController extends Controller
             ->count('e.employee_id');
 
         /* ---------------- TOTAL CLIENT ---------------- */
+
         $totalClients = DB::connection('mysql_second')
-            ->table('party_supervisors as ps')
-            ->join('parties as pa', function ($join) {
-                $join->on('ps.party_id', '=', 'pa.id')
-                     ->where('pa.type', 'customer')
-                     ->where('pa.inactive', 0);
-            })
-            ->whereNull('ps.end_date')
-            ->distinct('ps.party_id')
-            ->count('ps.party_id');
+        ->table('parties as pa')
+        ->where('pa.type', 'customer')
+        ->where('pa.inactive', 0)
+        ->distinct('pa.id')
+        ->count('pa.id');
+
 
         /* ---------------- TOTAL BRANCH ---------------- */
         $totalBranches = DB::connection('mysql_second')

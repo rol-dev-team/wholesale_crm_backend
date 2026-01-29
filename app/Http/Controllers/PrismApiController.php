@@ -212,9 +212,26 @@ AND d.id = 6 AND pa.inactive = 0");
     public function clientList()
     {
         try{
-        $branch = DB::connection('mysql_second')->select("SSELECT DISTINCT pa.id,pa.full_name AS client
-FROM parties pa 
-WHERE pa.type = 'customer' AND pa.inactive = 0");
+
+        $branch = DB::connection('mysql_second')->select("SELECT DISTINCT ps.party_id,pa.full_name AS client,pk.full_name AS current_supervisor,
+    (SELECT COUNT(DISTINCT other_party_id) 
+     FROM party_supervisors 
+     WHERE party_id = ps.party_id) AS total_supervisors_ever,
+    CASE 
+        WHEN (
+            SELECT COUNT(DISTINCT other_party_id) 
+            FROM party_supervisors 
+            WHERE party_id = ps.party_id
+        ) > 1 THEN 'Transferred Client'
+        ELSE 'Own Client'
+    END AS client_transfer_status,
+    ps.start_date AS supervisor_start_date,ps.end_date AS supervisor_end_date,ps.other_party_id,ps.inactive
+FROM party_supervisors ps
+JOIN parties pa ON ps.party_id = pa.id AND pa.type = 'customer' AND pa.inactive = 0
+JOIN parties pk ON ps.other_party_id = pk.id
+
+WHERE ps.end_date IS NULL
+GROUP BY ps.party_id, ps.inactive, pa.full_name, pk.full_name, ps.other_party_id, ps.start_date, ps.end_date");
         return response()->json([
         'status'  => true,
         'message' => 'Fetched client successfully',

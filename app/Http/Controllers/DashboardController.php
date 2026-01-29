@@ -15,11 +15,14 @@ class DashboardController extends Controller
 {
     public function adminSummary()
 {
-  $users = auth()->user();
-  return response()->json([
-      'status' => true, 
-      'data' => $users
-  ]);
+      // $kamIds = $this->getKamIdsByRole();
+
+      // return response()->json([
+      //   'status' => true, 
+      //   'message' => 'Fetched admin summary successfully',
+      //   'data' => $kamIds
+      // ]);
+
     try {
         /* ---------------- TOTAL KAM ---------------- */
         $totalKams = DB::connection('mysql_second')
@@ -45,7 +48,6 @@ class DashboardController extends Controller
         ->distinct('pa.id')
         ->count('pa.id');
 
-
         /* ---------------- TOTAL BRANCH ---------------- */
         $totalBranches = DB::connection('mysql_second')
             ->table('branches')
@@ -56,7 +58,7 @@ class DashboardController extends Controller
             'status' => true,
             'data' => [
                 'total_branches' => $totalBranches,
-                'total_kams'     => $totalKams,
+                'total_kams'     => $totalClients,
                 'total_clients'  => $totalClients,
             ]
         ]);
@@ -218,6 +220,106 @@ private function getSupervisorMonthlyTotals(
     ];
 }
 
+
+private function getKamIdsByRole(): array
+{
+    $user = auth()->user();
+
+    if (!$user) {
+        return [];
+    }
+
+    /* ---------------- SUPER ADMIN / MANAGEMENT → ALL KAM ---------------- */
+    if (in_array($user->role, ['super_admin', 'management'])) {
+        return DB::connection('mysql_second')
+            ->table('employments as e')
+            ->join('parties as pa', 'e.employee_id', '=', 'pa.id')
+            ->whereNull('pa.type')
+            ->where('pa.subtype', 2)
+            ->where('pa.role', 8)
+            ->where('pa.inactive', 0)
+            ->distinct()
+            ->pluck('e.employee_id')
+            ->toArray();
+    }
+
+    /* ---------------- KAM → ONLY OWN ---------------- */
+    if ($user->role === 'kam') {
+        return $user->default_kam_id ? [$user->default_kam_id] : [];
+    }
+
+    /* ---------------- SUPERVISOR ---------------- */
+    if ($user->role === 'supervisor') {
+
+        // Mapping table থেকে supervisor_ids
+        $mappedSupervisorIds = DB::table('user_supervisor_mappings')
+            ->where('user_id', $user->id)
+            ->pluck('supervisor_id')
+            ->toArray();
+
+        /**
+         * CASE 1: supervisor_id = 0 → ALL supervisors
+         */
+        if (in_array(0, $mappedSupervisorIds)) {
+              $allSupervisor = DB::connection('mysql_second')->select("
+                  SELECT DISTINCT ps.other_party_id AS supervisor_id
+                  FROM party_supervisors ps
+                  JOIN parties pa ON pa.id = ps.other_party_id
+                  JOIN employments e ON e.employee_id = ps.other_party_id
+                  JOIN branches b ON b.id = e.employment_branch_id
+                  JOIN departments d ON e.department_id = d.id
+                  WHERE pa.type IS NULL 
+                    AND pa.subtype = 2 
+                    AND pa.role = 8 
+                    AND d.id = 6
+              ");
+
+            $supervisorIds = $allSupervisor->pluck('supervisor_id')->toArray();
+
+        }
+        /**
+         * CASE 2: specific supervisors
+         */
+        else {
+            $supervisorIds = $mappedSupervisorIds;
+        }
+
+        $ids = implode(',', $supervisorIds); 
+
+    $kamList = DB::connection('mysql_second')->select("
+        SELECT DISTINCT 
+            e.employee_code,
+            e.employee_id,
+            pa.full_name,
+            e.manager_1,
+            p.full_name AS supervisor,
+            d.name AS department,
+            ds.name AS designation,
+            e.created,
+            e.updated,
+            e.start,
+            e.end,
+            e.job_location_id,
+            pa.branch_id,
+            e.manager_2
+        FROM employments e
+        JOIN parties pa ON e.employee_id = pa.id
+        JOIN departments d ON e.department_id = d.id
+        JOIN designations ds ON e.designation_id = ds.id
+        LEFT JOIN parties p ON p.id = e.manager_1
+        WHERE pa.type IS NULL
+          AND pa.subtype = 2
+          AND pa.role = 8
+          AND d.id = 6
+          AND pa.inactive = 0
+          AND e.manager_1 IN ($ids)
+    ");
+
+        return $kamList->pluck('employee_id')->toArray();
+    }
+
+    return [];
+}
 
 }
 

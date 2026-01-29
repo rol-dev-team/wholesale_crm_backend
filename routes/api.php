@@ -79,10 +79,16 @@ Route::prefix('prism')->group(function () {
     Route::get('/branch-list', [PrismApiController::class, 'branchList']);
     Route::get('/branch-wise-supervisor-list/{branch_id}', [PrismApiController::class, 'branchWiseSupervisorList']);
     Route::get('/supervisor-wise-kam-list/{supervisor_id}', [PrismApiController::class, 'supervisorWiseKamList']);
+    Route::post(
+    '/multi-supervisor-wise-kam-list',
+    [PrismApiController::class, 'multiSupervisorWiseKamList']
+);
+
     Route::get('/kam-wise-client-list/{kam_id}', [PrismApiController::class, 'kamWiseClientList']);
     Route::get('/kam-list', [PrismApiController::class, 'kamList']);
     Route::get('/client-list', [PrismApiController::class, 'clientList']);
     Route::get('/supervisor-list', [PrismApiController::class, 'supervisorList']);
+
 });
 
 

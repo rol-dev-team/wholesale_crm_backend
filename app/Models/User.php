@@ -28,6 +28,7 @@ class User extends Authenticatable
 
     protected $hidden = [
         'password',
+        'supervisor_mappings',
     ];
 
     protected function casts(): array
@@ -35,5 +36,20 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+ protected $appends = [
+        'supervisor_ids', // ✅ auto add
+    ];
+
+    public function supervisorMappings()
+    {
+        return $this->hasMany(UserSupervisorMapping::class, 'user_id');
+    }
+
+    public function getSupervisorIdsAttribute()
+    {
+        return $this->supervisorMappings()
+            ->pluck('supervisor_id')
+            ->values();
     }
 }

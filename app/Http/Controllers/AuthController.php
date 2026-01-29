@@ -23,7 +23,10 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $user = Auth::user();
+        // $user = Auth::user();
+        $user = Auth::user()
+    ->load('supervisorMappings')
+    ->makeHidden(['supervisor_mappings']);
 
         // token generate
         $token = $user->createToken('api_token')->plainTextToken;

@@ -50,14 +50,6 @@ public function index(Request $request)
     /* =========================
        MAIN DB : TASKS QUERY
     ========================== */
-    // $query = Task::query()
-    //     ->select(
-    //         'tasks.*',
-    //         'activity_types.activity_type_name',
-    //         'users.username as posted_by_user'
-    //     )
-    //     ->join('activity_types', 'activity_types.id', '=', 'tasks.activity_type_id')
-    //     ->join('users', 'users.id', '=', 'tasks.posted_by');
 
     $query = Task::query()
     ->with([
@@ -318,7 +310,47 @@ public function index(Request $request)
         ], 201);
     }
 
-    public function updateStatus(Request $request)
+//     public function updateStatus(Request $request)
+// {
+//     $data = $request->validate([
+//         'task_id' => 'required|exists:tasks,id',
+//         'status'  => 'required|in:completed,cancelled',
+//         'message' => 'required|string',
+//     ]);
+
+//      $task = Task::findOrFail($data['task_id']);
+
+//      if (in_array($task->status, ['completed', 'cancelled'])) {
+//         return response()->json([
+//             'status'  => true,
+//             'message' => 'Task already finalized',
+//         ], 400);
+//     }
+//     DB::transaction(function () use ($data) {
+
+//         // 1️⃣ Update task
+//         $task->update([
+//             'status'      => $data['status'],
+//             'description' => $data['message'], // ⭐ important
+//         ]);
+
+//         // 2️⃣ Log using EXISTING function
+//         $this->log(
+//             $task,
+//             $data['status'] === 'completed'
+//                 ? TaskLog::ACTION_COMPLETED
+//                 : TaskLog::ACTION_CANCELLED
+//         );
+//     });
+
+//     return response()->json([
+//         'status'  => true,
+//         'message' => 'Task status updated successfully',
+//     ]);
+// }
+
+
+public function updateStatus(Request $request)
 {
     $data = $request->validate([
         'task_id' => 'required|exists:tasks,id',
@@ -326,20 +358,21 @@ public function index(Request $request)
         'message' => 'required|string',
     ]);
 
-     $task = Task::findOrFail($data['task_id']);
+    $task = Task::findOrFail($data['task_id']);
 
-     if (in_array($task->status, ['completed', 'cancelled'])) {
+    if (in_array($task->status, ['completed', 'cancelled'])) {
         return response()->json([
-            'status'  => true,
+            'status'  => false,
             'message' => 'Task already finalized',
         ], 400);
     }
-    DB::transaction(function () use ($data) {
+
+    DB::transaction(function () use ($data, $task) {
 
         // 1️⃣ Update task
         $task->update([
             'status'      => $data['status'],
-            'description' => $data['message'], // ⭐ important
+            'description' => $data['message'],
         ]);
 
         // 2️⃣ Log using EXISTING function
@@ -356,6 +389,7 @@ public function index(Request $request)
         'message' => 'Task status updated successfully',
     ]);
 }
+
     /* ================= LOG HELPER ================= */
     private function log(Task $task, string $actionType): void
 {

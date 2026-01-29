@@ -82,6 +82,68 @@ AND e.manager_1 = '$supervisor_id'");
             ]);
         }
     }
+
+    public function multiSupervisorWiseKamList(Request $request)
+{
+    $data = $request->validate([
+        'supervisor_ids' => 'required|array',
+        'supervisor_ids.*' => 'integer',
+    ]);
+
+    try {
+        $supervisorIds = $data['supervisor_ids'];
+
+        $query = DB::connection('mysql_second')
+            ->table('employments as e')
+            ->join('parties as pa', 'e.employee_id', '=', 'pa.id')
+            ->join('departments as d', 'e.department_id', '=', 'd.id')
+            ->join('designations as ds', 'e.designation_id', '=', 'ds.id')
+            ->leftJoin('parties as p', 'p.id', '=', 'e.manager_1')
+            ->whereNull('pa.type')
+            ->where('pa.subtype', 2)
+            ->where('pa.role', 8)
+            ->where('d.id', 6)
+            ->where('pa.inactive', 0);
+
+        // ✅ IMPORTANT PART
+        if (!in_array(0, $supervisorIds)) {
+            $query->whereIn('e.manager_1', $supervisorIds);
+        }
+        // else → ALL supervisors' KAMs
+
+        $kams = $query->selectRaw("
+                DISTINCT
+                e.employee_code,
+                e.employee_id,
+                pa.full_name,
+                e.manager_1,
+                p.full_name AS supervisor,
+                d.name AS department,
+                ds.name AS designation,
+                e.created,
+                e.updated,
+                e.start,
+                e.end,
+                e.job_location_id,
+                pa.branch_id,
+                e.manager_2
+            ")
+            ->get();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Fetched KAMs successfully',
+            'data'    => $kams,
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => false,
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+}
+
     public function kamWiseClientList($kam_id)
     {
         try{
